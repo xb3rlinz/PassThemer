@@ -656,6 +656,32 @@ body {
     box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
 }
 
+/* ===== Export Options ===== */
+.export-options {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.version-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.version-toggle label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.version-toggle .overlay-mode-toggle {
+    margin-bottom: 0;
+}
+
 /* ===== Footer ===== */
 .footer {
     text-align: center;

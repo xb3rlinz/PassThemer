@@ -12,6 +12,19 @@ const OVERLAY_FILENAMES = [
     'en-9-W X Y Z--white.png'
 ];
 
+const OVERLAY_FILENAMES_V10 = [
+    'en-0---white-bold.png',
+    'en-1---white-bold.png',
+    'en-2-A B C--white-bold.png',
+    'en-3-D E F--white-bold.png',
+    'en-4-G H I--white-bold.png',
+    'en-5-J K L--white-bold.png',
+    'en-6-M N O--white-bold.png',
+    'en-7-P Q R S--white-bold.png',
+    'en-8-T U V--white-bold.png',
+    'en-9-W X Y Z--white-bold.png'
+];
+
 const OUTPUT_WIDTH = 305;
 const OUTPUT_HEIGHT = 287;
 
@@ -21,6 +34,7 @@ let overlays = new Map();
 let singleOverlayImage = null;
 let overlayMode = 'single'; // 'single' or 'multiple'
 let generatedImages = [];
+let exportVersion = '8'; // '8' or '10'
 
 // ===== DOM Elements =====
 const photoDropZone = document.getElementById('photoDropZone');
@@ -32,13 +46,15 @@ const singleOverlayPreview = document.getElementById('singleOverlayPreview');
 const overlaysDropZone = document.getElementById('overlaysDropZone');
 const overlaysInput = document.getElementById('overlaysInput');
 const overlayChecklist = document.getElementById('overlayChecklist');
-const modeButtons = document.querySelectorAll('.mode-btn');
+const modeButtons = document.querySelectorAll('.mode-btn[data-mode]');
 const toggleButtons = document.querySelectorAll('.toggle-btn');
 const generateBtn = document.getElementById('generateBtn');
 const previewSection = document.getElementById('previewSection');
 const previewGrid = document.getElementById('previewGrid');
 const downloadBtn = document.getElementById('downloadBtn');
 const downloadPassthmBtn = document.getElementById('downloadPassthmBtn');
+const versionBtn8 = document.getElementById('versionBtn8');
+const versionBtn10 = document.getElementById('versionBtn10');
 const transparentBgBtn = document.getElementById('transparentBgBtn');
 const overlayControls = document.getElementById('overlayControls');
 const overlayScaleSlider = document.getElementById('overlayScale');
@@ -60,6 +76,7 @@ function init() {
     setupOverlayModeToggle();
     setupPositionControls();
     setupGenerateButton();
+    setupVersionToggle();
     setupDownloadButton();
     setupDownloadPassthmButton();
     renderOverlayChecklist();
@@ -579,15 +596,36 @@ function compositeOverlay(base, overlay, width, height) {
 const exportFilenameInput = document.getElementById('exportFilename');
 
 function getExportFilename(extension) {
-    const baseName = exportFilenameInput.value.trim() || 'TelephonyUI-8';
+    const baseName = exportFilenameInput.value.trim() || `TelephonyUI-${exportVersion}`;
     return `${baseName}.${extension}`;
 }
 
-function setupDownloadButton() {
-    downloadBtn.addEventListener('click', () => downloadAll(getExportFilename('zip')));
+function getActiveFilenames() {
+    return exportVersion === '10' ? OVERLAY_FILENAMES_V10 : null;
 }
 
-async function downloadAll(filename) {
+function setupVersionToggle() {
+    const versionButtons = [versionBtn8, versionBtn10];
+    versionButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            versionButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            exportVersion = btn.dataset.version;
+            exportFilenameInput.value = `TelephonyUI-${exportVersion}`;
+            generateTheme();
+        });
+    });
+}
+
+function setupDownloadButton() {
+    downloadBtn.addEventListener('click', () => downloadAll(getExportFilename('zip'), getActiveFilenames()));
+}
+
+function setupDownloadPassthmButton() {
+    downloadPassthmBtn.addEventListener('click', () => downloadAll(getExportFilename('passthm'), getActiveFilenames()));
+}
+
+async function downloadAll(filename, customFilenames = null) {
     if (generatedImages.length === 0) return;
 
     const zip = new JSZip();
@@ -595,7 +633,8 @@ async function downloadAll(filename) {
     // Add each image to the zip
     for (const img of generatedImages) {
         const base64Data = img.dataUrl.split(',')[1];
-        zip.file(img.filename, base64Data, { base64: true });
+        const nameToUse = customFilenames ? customFilenames[img.key] : img.filename;
+        zip.file(nameToUse, base64Data, { base64: true });
     }
 
     // Add credit file
@@ -612,10 +651,6 @@ async function downloadAll(filename) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-}
-
-function setupDownloadPassthmButton() {
-    downloadPassthmBtn.addEventListener('click', () => downloadAll(getExportFilename('passthm')));
 }
 
 // ===== Start =====

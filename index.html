@@ -136,9 +136,18 @@
                         </button>
                     </div>
                 </div>
-                <div class="filename-input">
-                    <label for="exportFilename">Export Name:</label>
-                    <input type="text" id="exportFilename" value="TelephonyUI-8" placeholder="Enter filename">
+                <div class="export-options">
+                    <div class="version-toggle">
+                        <label>Version:</label>
+                        <div class="overlay-mode-toggle">
+                            <button class="mode-btn active" data-version="8" id="versionBtn8">TelephonyUI-8</button>
+                            <button class="mode-btn" data-version="10" id="versionBtn10">TelephonyUI-10</button>
+                        </div>
+                    </div>
+                    <div class="filename-input">
+                        <label for="exportFilename">Export Name:</label>
+                        <input type="text" id="exportFilename" value="TelephonyUI-8" placeholder="Enter filename">
+                    </div>
                 </div>
                 <div class="download-buttons">
                     <button class="download-btn" id="downloadBtn">
