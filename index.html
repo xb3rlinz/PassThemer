@@ -68,39 +68,82 @@
                     <h2>Overlay</h2>
                     <div class="overlay-mode-toggle">
                         <button class="mode-btn active" data-mode="single">Single Image</button>
-                        <button class="mode-btn" data-mode="multiple">10 Separate</button>
+                        <button class="mode-btn" data-mode="multiple">12 Separate</button>
                     </div>
 
-                    <div class="drop-zone" id="singleOverlayDropZone">
-                        <div class="drop-zone-content">
-                            <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <rect x="3" y="3" width="18" height="18" rx="2" />
-                                <line x1="3" y1="9" x2="21" y2="9" />
-                                <line x1="9" y1="21" x2="9" y2="9" />
-                            </svg>
-                            <p>Drop single overlay image</p>
-                            <span>Will be split into 10 sections</span>
+                    <div class="appearance-inputs" id="singleOverlayInputs">
+                        <div class="appearance-panel">
+                            <h3>Dark overlay</h3>
+                            <div class="drop-zone" id="singleOverlayDarkDropZone">
+                                <div class="drop-zone-content">
+                                    <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                                        <line x1="3" y1="9" x2="21" y2="9" />
+                                        <line x1="9" y1="21" x2="9" y2="9" />
+                                    </svg>
+                                    <p>Drop dark overlay image</p>
+                                    <span>Split into 12 key positions</span>
+                                </div>
+                                <img class="preview-image" id="singleOverlayDarkPreview" alt="Dark overlay preview">
+                                <input type="file" id="singleOverlayDarkInput" accept="image/*" hidden>
+                            </div>
                         </div>
-                        <img class="preview-image" id="singleOverlayPreview" alt="Overlay preview">
-                        <input type="file" id="singleOverlayInput" accept="image/*" hidden>
+
+                        <div class="appearance-panel">
+                            <h3>Light overlay</h3>
+                            <div class="drop-zone" id="singleOverlayLightDropZone">
+                                <div class="drop-zone-content">
+                                    <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                                        <line x1="3" y1="9" x2="21" y2="9" />
+                                        <line x1="9" y1="21" x2="9" y2="9" />
+                                    </svg>
+                                    <p>Drop light overlay image</p>
+                                    <span>Split into 12 key positions</span>
+                                </div>
+                                <img class="preview-image" id="singleOverlayLightPreview" alt="Light overlay preview">
+                                <input type="file" id="singleOverlayLightInput" accept="image/*" hidden>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="drop-zone hidden" id="overlaysDropZone">
-                        <div class="drop-zone-content">
-                            <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-                                <polyline points="14,2 14,8 20,8" />
-                                <line x1="12" y1="18" x2="12" y2="12" />
-                                <line x1="9" y1="15" x2="15" y2="15" />
-                            </svg>
-                            <p>Drag & drop overlay images</p>
-                            <span>or click to browse (select all 10)</span>
+                    <div class="appearance-inputs hidden" id="separateOverlayInputs">
+                        <div class="appearance-panel">
+                            <h3>Dark overlays</h3>
+                            <div class="drop-zone" id="darkOverlaysDropZone">
+                                <div class="drop-zone-content">
+                                    <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                                        <polyline points="14,2 14,8 20,8" />
+                                        <line x1="12" y1="18" x2="12" y2="12" />
+                                        <line x1="9" y1="15" x2="15" y2="15" />
+                                    </svg>
+                                    <p>Drop 12 dark overlays</p>
+                                    <span>Include files for 0–9, * and #</span>
+                                </div>
+                                <input type="file" id="darkOverlaysInput" accept="image/*" multiple hidden>
+                            </div>
+                            <ul class="overlay-checklist" id="darkOverlayChecklist"></ul>
                         </div>
-                        <input type="file" id="overlaysInput" accept="image/*" multiple hidden>
+
+                        <div class="appearance-panel">
+                            <h3>Light overlays</h3>
+                            <div class="drop-zone" id="lightOverlaysDropZone">
+                                <div class="drop-zone-content">
+                                    <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                                        <polyline points="14,2 14,8 20,8" />
+                                        <line x1="12" y1="18" x2="12" y2="12" />
+                                        <line x1="9" y1="15" x2="15" y2="15" />
+                                    </svg>
+                                    <p>Drop 12 light overlays</p>
+                                    <span>Include files for 0–9, * and #</span>
+                                </div>
+                                <input type="file" id="lightOverlaysInput" accept="image/*" multiple hidden>
+                            </div>
+                            <ul class="overlay-checklist" id="lightOverlayChecklist"></ul>
+                        </div>
                     </div>
-                    <ul class="overlay-checklist hidden" id="overlayChecklist"></ul>
                 </div>
             </section>
 
@@ -148,15 +191,23 @@
                     <div class="version-toggle">
                         <label>Version:</label>
                         <div class="overlay-mode-toggle">
-                            <button class="mode-btn active" data-version="8" id="versionBtn8">TelephonyUI-8</button>
-                            <button class="mode-btn" data-version="10" id="versionBtn10">TelephonyUI-10</button>
+                            <button class="mode-btn hidden" data-version="8" id="versionBtn8" disabled>TelephonyUI-8</button>
+                            <button class="mode-btn active" data-version="10" id="versionBtn10">TelephonyUI-10</button>
+                        </div>
+                    </div>
+                    <div class="appearance-toggle hidden" id="appearanceToggle">
+                        <label>Preview:</label>
+                        <div class="overlay-mode-toggle">
+                            <button class="mode-btn active" data-appearance="dark">Dark</button>
+                            <button class="mode-btn" data-appearance="light">Light</button>
                         </div>
                     </div>
                     <div class="filename-input">
                         <label for="exportFilename">Export Name:</label>
-                        <input type="text" id="exportFilename" value="TelephonyUI-8" placeholder="Enter filename">
+                        <input type="text" id="exportFilename" value="TelephonyUI-10" placeholder="Enter filename">
                     </div>
                 </div>
+                <p class="version-note hidden" id="v10ExportNote">TelephonyUI-10 exports normal and highlighted assets for both dark and light appearances, including * and #.</p>
                 <div class="download-buttons">
                     <button class="download-btn" id="downloadBtn">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

@@ -12,40 +12,78 @@ const OVERLAY_FILENAMES = [
     'en-9-W X Y Z--white.png'
 ];
 
-const OVERLAY_FILENAMES_V10 = [
-    'en-0---white-bold.png',
-    'en-1---white-bold.png',
-    'en-2-A B C--white-bold.png',
-    'en-3-D E F--white-bold.png',
-    'en-4-G H I--white-bold.png',
-    'en-5-J K L--white-bold.png',
-    'en-6-M N O--white-bold.png',
-    'en-7-P Q R S--white-bold.png',
-    'en-8-T U V--white-bold.png',
-    'en-9-W X Y Z--white-bold.png'
+const V10_KEY_DEFINITIONS = [
+    { key: '0', prefix: 'other-0-+', position: [1, 3] },
+    { key: '1', prefix: 'other-1-', position: [0, 0] },
+    { key: '2', prefix: 'other-2-A B C', position: [1, 0] },
+    { key: '3', prefix: 'other-3-D E F', position: [2, 0] },
+    { key: '4', prefix: 'other-4-G H I', position: [0, 1] },
+    { key: '5', prefix: 'other-5-J K L', position: [1, 1] },
+    { key: '6', prefix: 'other-6-M N O', position: [2, 1] },
+    { key: '7', prefix: 'other-7-P Q R S', position: [0, 2] },
+    { key: '8', prefix: 'other-8-T U V', position: [1, 2] },
+    { key: '9', prefix: 'other-9-W X Y Z', position: [2, 2] },
+    { key: '*', prefix: 'other-*-', position: [0, 3] },
+    { key: '#', prefix: 'other-#-', position: [2, 3] }
 ];
-
+const V10_APPEARANCES = {
+    dark: 'white',
+    light: 'mask'
+};
+const V10_OUTPUT_WIDTH = 225;
+const V10_OUTPUT_HEIGHT = 225;
 const OUTPUT_WIDTH = 305;
 const OUTPUT_HEIGHT = 287;
 
 // ===== State =====
 let backgroundImage = null;
-let overlays = new Map();
-let singleOverlayImage = null;
+const separateOverlays = {
+    dark: new Map(),
+    light: new Map()
+};
+const singleOverlayImages = {
+    dark: null,
+    light: null
+};
+const overlayTransforms = {
+    dark: { scale: 100, posX: 0, posY: 0, rotation: 0 },
+    light: { scale: 100, posX: 0, posY: 0, rotation: 0 }
+};
 let overlayMode = 'single'; // 'single' or 'multiple'
 let generatedImages = [];
-let exportVersion = '8'; // '8' or '10'
+let exportVersion = '10'; // '10' while TelephonyUI-8 is temporarily disabled
+let generatedVersion = null;
+let previewAppearance = 'dark';
+let generationRequest = 0;
 
 // ===== DOM Elements =====
 const photoDropZone = document.getElementById('photoDropZone');
 const photoInput = document.getElementById('photoInput');
 const photoPreview = document.getElementById('photoPreview');
-const singleOverlayDropZone = document.getElementById('singleOverlayDropZone');
-const singleOverlayInput = document.getElementById('singleOverlayInput');
-const singleOverlayPreview = document.getElementById('singleOverlayPreview');
-const overlaysDropZone = document.getElementById('overlaysDropZone');
-const overlaysInput = document.getElementById('overlaysInput');
-const overlayChecklist = document.getElementById('overlayChecklist');
+const singleOverlayDropZones = {
+    dark: document.getElementById('singleOverlayDarkDropZone'),
+    light: document.getElementById('singleOverlayLightDropZone')
+};
+const singleOverlayInputs = {
+    dark: document.getElementById('singleOverlayDarkInput'),
+    light: document.getElementById('singleOverlayLightInput')
+};
+const singleOverlayPreviews = {
+    dark: document.getElementById('singleOverlayDarkPreview'),
+    light: document.getElementById('singleOverlayLightPreview')
+};
+const separateOverlayDropZones = {
+    dark: document.getElementById('darkOverlaysDropZone'),
+    light: document.getElementById('lightOverlaysDropZone')
+};
+const separateOverlayInputs = {
+    dark: document.getElementById('darkOverlaysInput'),
+    light: document.getElementById('lightOverlaysInput')
+};
+const overlayChecklists = {
+    dark: document.getElementById('darkOverlayChecklist'),
+    light: document.getElementById('lightOverlayChecklist')
+};
 const modeButtons = document.querySelectorAll('.mode-btn[data-mode]');
 const toggleButtons = document.querySelectorAll('.toggle-btn');
 const generateBtn = document.getElementById('generateBtn');
@@ -55,6 +93,10 @@ const downloadBtn = document.getElementById('downloadBtn');
 const downloadPassthmBtn = document.getElementById('downloadPassthmBtn');
 const versionBtn8 = document.getElementById('versionBtn8');
 const versionBtn10 = document.getElementById('versionBtn10');
+const appearanceToggle = document.getElementById('appearanceToggle');
+const appearanceButtons = document.querySelectorAll('.mode-btn[data-appearance]');
+const v10ExportNote = document.getElementById('v10ExportNote');
+const generateWarning = document.getElementById('generateWarning');
 const transparentBgBtn = document.getElementById('transparentBgBtn');
 const overlayControls = document.getElementById('overlayControls');
 const overlayScaleSlider = document.getElementById('overlayScale');
@@ -70,16 +112,23 @@ const resetPosBtn = document.getElementById('resetPosBtn');
 // ===== Initialize =====
 function init() {
     setupDropZone(photoDropZone, photoInput, handlePhotoUpload);
-    setupDropZone(singleOverlayDropZone, singleOverlayInput, handleSingleOverlayUpload);
-    setupDropZone(overlaysDropZone, overlaysInput, handleOverlaysUpload);
+    Object.keys(singleOverlayDropZones).forEach(appearance => {
+        setupDropZone(singleOverlayDropZones[appearance], singleOverlayInputs[appearance], files => handleSingleOverlayUpload(files, appearance));
+    });
+    Object.keys(separateOverlayDropZones).forEach(appearance => {
+        setupDropZone(separateOverlayDropZones[appearance], separateOverlayInputs[appearance], files => handleOverlaysUpload(files, appearance));
+    });
     setupTransparentBgButton();
     setupOverlayModeToggle();
     setupPositionControls();
     setupGenerateButton();
     setupVersionToggle();
+    setupAppearanceToggle();
     setupDownloadButton();
     setupDownloadPassthmButton();
-    renderOverlayChecklist();
+    updateAppearanceControls();
+    renderOverlayChecklist('dark');
+    renderOverlayChecklist('light');
 }
 
 // ===== Drop Zone Setup =====
@@ -170,43 +219,53 @@ function setupPositionControls() {
     // Scale
     overlayScaleSlider.addEventListener('input', () => {
         scaleValueDisplay.textContent = overlayScaleSlider.value;
+        overlayTransforms[previewAppearance].scale = Number(overlayScaleSlider.value);
         update();
     });
 
     // X Position
     overlayPosXSlider.addEventListener('input', () => {
         posXValueDisplay.textContent = overlayPosXSlider.value;
+        overlayTransforms[previewAppearance].posX = Number(overlayPosXSlider.value);
         update();
     });
 
     // Y Position
     overlayPosYSlider.addEventListener('input', () => {
         posYValueDisplay.textContent = overlayPosYSlider.value;
+        overlayTransforms[previewAppearance].posY = Number(overlayPosYSlider.value);
         update();
     });
 
     // Rotation
     overlayRotationSlider.addEventListener('input', () => {
         rotationValueDisplay.textContent = overlayRotationSlider.value;
+        overlayTransforms[previewAppearance].rotation = Number(overlayRotationSlider.value);
         update();
     });
 
     // Reset Button
     resetPosBtn.addEventListener('click', () => {
-        overlayScaleSlider.value = 100;
-        scaleValueDisplay.textContent = '100';
-        overlayPosXSlider.value = 0;
-        posXValueDisplay.textContent = '0';
-        overlayPosYSlider.value = 0;
-        posYValueDisplay.textContent = '0';
-        overlayRotationSlider.value = 0;
-        rotationValueDisplay.textContent = '0';
+        overlayTransforms[previewAppearance] = { scale: 100, posX: 0, posY: 0, rotation: 0 };
+        syncPositionControls();
         update();
     });
 }
 
+function syncPositionControls() {
+    const transform = overlayTransforms[previewAppearance];
+    overlayScaleSlider.value = transform.scale;
+    scaleValueDisplay.textContent = String(transform.scale);
+    overlayPosXSlider.value = transform.posX;
+    posXValueDisplay.textContent = String(transform.posX);
+    overlayPosYSlider.value = transform.posY;
+    posYValueDisplay.textContent = String(transform.posY);
+    overlayRotationSlider.value = transform.rotation;
+    rotationValueDisplay.textContent = String(transform.rotation);
+}
+
 // ===== Overlays Upload =====
-function handleOverlaysUpload(files) {
+function handleOverlaysUpload(files, appearance) {
     const imageFiles = files.filter(f => f.type.startsWith('image/'));
 
     if (imageFiles.length === 0) {
@@ -220,45 +279,40 @@ function handleOverlaysUpload(files) {
     imageFiles.forEach(file => {
         const filename = file.name;
 
-        // First, try exact match
-        if (OVERLAY_FILENAMES.includes(filename)) {
-            loadOverlay(file, filename);
+        const key = resolveV10OverlayKey(filename);
+        if (key !== null) {
+            loadOverlay(file, key, appearance);
             matchedCount++;
             return;
-        }
-
-        // Try to match by number in filename
-        const digitMatch = filename.match(/(\d+)/);
-        if (digitMatch) {
-            let digit = parseInt(digitMatch[1]);
-            // Often users name their 0th image as 10.png
-            if (digit === 10) {
-                digit = 0;
-            }
-
-            if (digit >= 0 && digit <= 9) {
-                const targetFilename = OVERLAY_FILENAMES[digit];
-                loadOverlay(file, targetFilename);
-                matchedCount++;
-                return;
-            }
         }
 
         unmatchedFiles.push(filename);
     });
 
     if (unmatchedFiles.length > 0 && matchedCount === 0) {
-        alert(`Could not match overlay files. Expected filenames containing numbers 0-9 (or 1-10) in the name.`);
+        alert('Could not match overlay files. Use filenames containing 0-9, * or #.');
     }
 }
 
-function loadOverlay(file, targetFilename) {
+function resolveV10OverlayKey(filename) {
+    if (filename.includes('#')) return '#';
+    if (filename.includes('*')) return '*';
+
+    const digitMatch = filename.match(/(\d+)/);
+    if (!digitMatch) return null;
+
+    let digit = parseInt(digitMatch[1]);
+    if (digit === 10) digit = 0;
+    return digit >= 0 && digit <= 9 ? String(digit) : null;
+}
+
+function loadOverlay(file, key, appearance) {
     const reader = new FileReader();
     reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-            overlays.set(targetFilename, img);
-            renderOverlayChecklist();
+            separateOverlays[appearance].set(key, img);
+            renderOverlayChecklist(appearance);
             updateGenerateButton();
         };
         img.src = e.target.result;
@@ -267,7 +321,7 @@ function loadOverlay(file, targetFilename) {
 }
 
 // ===== Single Overlay Upload =====
-function handleSingleOverlayUpload(files) {
+function handleSingleOverlayUpload(files, appearance) {
     const file = files[0];
     if (!file || !file.type.startsWith('image/')) {
         alert('Please upload a valid image file');
@@ -278,9 +332,9 @@ function handleSingleOverlayUpload(files) {
     reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-            singleOverlayImage = img;
-            singleOverlayPreview.src = e.target.result;
-            singleOverlayDropZone.classList.add('has-image');
+            singleOverlayImages[appearance] = img;
+            singleOverlayPreviews[appearance].src = e.target.result;
+            singleOverlayDropZones[appearance].classList.add('has-image');
             overlayControls.classList.add('visible');
             updateGenerateButton();
         };
@@ -299,16 +353,15 @@ function setupOverlayModeToggle() {
 
             // Toggle visibility of drop zones
             if (overlayMode === 'single') {
-                singleOverlayDropZone.classList.remove('hidden');
-                overlaysDropZone.classList.add('hidden');
-                overlayChecklist.classList.add('hidden');
-                overlayControls.classList.remove('hidden');
+                document.getElementById('singleOverlayInputs').classList.remove('hidden');
+                document.getElementById('separateOverlayInputs').classList.add('hidden');
             } else {
-                singleOverlayDropZone.classList.add('hidden');
-                overlaysDropZone.classList.remove('hidden');
-                overlayChecklist.classList.remove('hidden');
-                overlayControls.classList.add('hidden');
+                document.getElementById('singleOverlayInputs').classList.add('hidden');
+                document.getElementById('separateOverlayInputs').classList.remove('hidden');
             }
+
+            overlayControls.classList.add('visible');
+            overlayControls.classList.remove('hidden');
 
             updateGenerateButton();
         });
@@ -316,11 +369,12 @@ function setupOverlayModeToggle() {
 }
 
 // ===== Overlay Checklist =====
-function renderOverlayChecklist() {
-    overlayChecklist.innerHTML = OVERLAY_FILENAMES.map(filename => {
-        const loaded = overlays.has(filename);
-        const shortName = filename.replace('en-', '').replace('--white.png', '').replace('-', ': ');
-        return `<li class="${loaded ? 'loaded' : ''}">${shortName}</li>`;
+function renderOverlayChecklist(appearance) {
+    const checklist = overlayChecklists[appearance];
+    if (!checklist) return;
+    checklist.innerHTML = V10_KEY_DEFINITIONS.map(({ key }) => {
+        const loaded = separateOverlays[appearance].has(key);
+        return `<li class="${loaded ? 'loaded' : ''}">${key}</li>`;
     }).join('');
 }
 
@@ -332,9 +386,9 @@ function updateGenerateButton() {
     let hasOverlay = false;
 
     if (overlayMode === 'single') {
-        hasOverlay = singleOverlayImage !== null;
+        hasOverlay = singleOverlayImages.dark !== null && singleOverlayImages.light !== null;
     } else {
-        hasOverlay = overlays.size === 10;
+        hasOverlay = separateOverlays.dark.size === V10_KEY_DEFINITIONS.length && separateOverlays.light.size === V10_KEY_DEFINITIONS.length;
     }
 
     generateBtn.disabled = !(hasPhoto && hasOverlay);
@@ -344,11 +398,11 @@ function updateGenerateButton() {
         if (generateBtn.disabled) {
             let missing = [];
             if (!hasPhoto) missing.push("Background Photo");
-            if (!hasOverlay) missing.push(overlayMode === 'single' ? "Overlay Image" : "All 10 Overlay Images");
+            if (!hasOverlay) missing.push(overlayMode === 'single' ? "Both Dark and Light Overlay Images" : "All 12 Dark and 12 Light Overlay Images");
 
             // Only show the warning if they have uploaded AT LEAST one thing, 
             // so it doesn't yell at them immediately on page load.
-            if (hasPhoto || overlays.size > 0 || singleOverlayImage !== null) {
+            if (hasPhoto || separateOverlays.dark.size > 0 || separateOverlays.light.size > 0 || singleOverlayImages.dark !== null || singleOverlayImages.light !== null) {
                 warningEl.textContent = `Missing: ${missing.join(' and ')}`;
                 warningEl.classList.remove('hidden');
             } else {
@@ -365,28 +419,72 @@ function setupGenerateButton() {
 }
 
 // ===== Core Image Processing =====
-function generateTheme() {
+async function generateTheme() {
     if (!backgroundImage) return;
 
-    generatedImages = [];
-    previewGrid.innerHTML = '';
+    const targetVersion = exportVersion;
+    const requestId = ++generationRequest;
+    if (requestId !== generationRequest || targetVersion !== exportVersion) return;
 
-    // Split the photo into 10 slices
-    const photoSlices = splitPhoto(backgroundImage);
+    try {
+        clearGeneratedTheme();
 
-    // Get overlay slices based on mode
-    let overlaySlices;
-    if (overlayMode === 'single' && singleOverlayImage) {
-        // Cut 10 sections of exactly 300x287 from the overlay (no resizing)
-        overlaySlices = splitOverlayFixed(singleOverlayImage);
-    } else if (overlayMode === 'multiple' && overlays.size === 10) {
-        // Use the individual overlay images
-        overlaySlices = OVERLAY_FILENAMES.map(filename => overlays.get(filename));
-    } else {
-        return;
+        // TelephonyUI-10 uses 12 keypad positions; the hidden v8 fallback uses 10.
+        const photoSlices = splitPhoto(backgroundImage, targetVersion === '10' ? 12 : 10);
+
+        // Get overlay slices based on mode
+        let overlaySlices;
+        if (targetVersion === '10') {
+            const overlaySlicesByAppearance = {};
+            for (const appearance of Object.keys(V10_APPEARANCES)) {
+                if (overlayMode === 'single' && singleOverlayImages[appearance]) {
+                    overlaySlicesByAppearance[appearance] = splitOverlayFixed(
+                        singleOverlayImages[appearance],
+                        V10_OUTPUT_WIDTH,
+                        V10_OUTPUT_HEIGHT,
+                        true,
+                        overlayTransforms[appearance]
+                    );
+                } else if (overlayMode === 'multiple' && separateOverlays[appearance].size === V10_KEY_DEFINITIONS.length) {
+                    overlaySlicesByAppearance[appearance] = V10_KEY_DEFINITIONS.map(({ key }) =>
+                        transformOverlaySlice(
+                            separateOverlays[appearance].get(key),
+                            V10_OUTPUT_WIDTH,
+                            V10_OUTPUT_HEIGHT,
+                            overlayTransforms[appearance]
+                        )
+                    );
+                } else {
+                    return;
+                }
+            }
+            generateV10Images(photoSlices, overlaySlicesByAppearance);
+        } else {
+            if (overlayMode === 'single' && !singleOverlayImages.dark) return;
+            if (overlayMode === 'multiple' && separateOverlays.dark.size !== 10) return;
+            const overlaySlices = overlayMode === 'single'
+                ? splitOverlayFixed(singleOverlayImages.dark, OUTPUT_WIDTH, OUTPUT_HEIGHT, false, overlayTransforms.dark)
+                : OVERLAY_FILENAMES.map((filename, index) =>
+                    transformOverlaySlice(separateOverlays.dark.get(String(index)), OUTPUT_WIDTH, OUTPUT_HEIGHT, overlayTransforms.dark)
+                );
+            generateV8Images(photoSlices, overlaySlices);
+        }
+
+        generatedVersion = targetVersion;
+        updateAppearanceControls();
+        renderPreview();
+        previewSection.classList.add('visible');
+    } catch (error) {
+        console.error('Theme generation failed:', error);
+        const message = error.message || 'unknown error';
+        const isTaintedCanvas = message.includes('Tainted canvases') || error.name === 'SecurityError';
+        showGenerationError(isTaintedCanvas
+            ? 'Theme generation was blocked because an image came from another origin. Run the app through a local HTTP server (for example: python3 -m http.server 8080) and make sure the complete "TelephonyUI-10 Default" directory is deployed beside it.'
+            : `Theme generation failed: ${message}`);
     }
+}
 
-    // Store all generated images first
+function generateV8Images(photoSlices, overlaySlices) {
     photoSlices.forEach((photoSlice, index) => {
         const filename = OVERLAY_FILENAMES[index];
         const overlaySlice = overlaySlices[index];
@@ -407,11 +505,46 @@ function generateTheme() {
             dataUrl: final.toDataURL('image/png')
         });
     });
+}
 
-    // Display in passcode order: 1,2,3,4,5,6,7,8,9,0
-    const displayOrder = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
+function generateV10Images(photoSlices, overlaySlicesByAppearance) {
+    V10_KEY_DEFINITIONS.forEach(({ key }, keyIndex) => {
+        Object.entries(V10_APPEARANCES).forEach(([appearance, assetType]) => {
+            const base = compositeOverlay(
+                resizeAndCrop(photoSlices[keyIndex], V10_OUTPUT_WIDTH, V10_OUTPUT_HEIGHT),
+                overlaySlicesByAppearance[appearance][keyIndex],
+                V10_OUTPUT_WIDTH,
+                V10_OUTPUT_HEIGHT
+            );
+
+            ['normal', 'highlighted'].forEach(state => {
+                const filename = getV10AssetFilename(key, state, assetType);
+
+                generatedImages.push({
+                    key,
+                    filename,
+                    appearance,
+                    state,
+                    dataUrl: base.toDataURL('image/png')
+                });
+            });
+        });
+    });
+}
+
+function renderPreview() {
+    const isV10 = generatedVersion === '10';
+    const displayOrder = isV10
+        ? ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
+        : [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
+
+    previewGrid.innerHTML = '';
+    previewGrid.classList.toggle('v10-grid', isV10);
+    previewGrid.classList.toggle('preview-light', isV10 && previewAppearance === 'light');
     displayOrder.forEach(key => {
-        const img = generatedImages.find(g => g.key === key);
+        const img = isV10
+            ? generatedImages.find(g => g.key === key && g.appearance === previewAppearance && g.state === 'normal')
+            : generatedImages.find(g => g.key === key);
         if (img) {
             const previewItem = document.createElement('div');
             previewItem.className = 'preview-item';
@@ -423,21 +556,67 @@ function generateTheme() {
             previewGrid.appendChild(previewItem);
         }
     });
-
-    previewSection.classList.add('visible');
 }
 
-function splitPhoto(image) {
+function clearGeneratedTheme() {
+    generatedImages = [];
+    generatedVersion = null;
+    previewGrid.innerHTML = '';
+    previewGrid.classList.remove('v10-grid', 'preview-light');
+    updateAppearanceControls();
+}
+
+function showGenerationError(message) {
+    if (!generateWarning) return;
+    generateWarning.textContent = message;
+    generateWarning.classList.remove('hidden');
+}
+
+function getV10AssetFilename(key, state, assetType) {
+    const definition = V10_KEY_DEFINITIONS.find(item => item.key === key);
+    const statePart = state === 'highlighted' ? '-hi' : '-';
+    return `${definition.prefix}${statePart}-${assetType}.png`;
+}
+
+function createBlankOverlaySlice() {
+    const canvas = document.createElement('canvas');
+    canvas.width = V10_OUTPUT_WIDTH;
+    canvas.height = V10_OUTPUT_HEIGHT;
+    return canvas;
+}
+
+function transformOverlaySlice(image, outputWidth, outputHeight, transform) {
+    const canvas = document.createElement('canvas');
+    canvas.width = outputWidth;
+    canvas.height = outputHeight;
+    const ctx = canvas.getContext('2d');
+    const scale = transform.scale / 100;
+    const rotation = transform.rotation * Math.PI / 180;
+
+    ctx.translate(outputWidth / 2 - transform.posX, outputHeight / 2 - transform.posY);
+    ctx.rotate(rotation);
+    ctx.drawImage(
+        image,
+        -(image.width * scale) / 2,
+        -(image.height * scale) / 2,
+        image.width * scale,
+        image.height * scale
+    );
+
+    return canvas;
+}
+
+function splitPhoto(image, sliceCount = 10) {
     const slices = [];
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
     // Split horizontally (left to right)
-    const sliceWidth = image.width / 10;
+    const sliceWidth = image.width / sliceCount;
     canvas.width = sliceWidth;
     canvas.height = image.height;
 
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < sliceCount; i++) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(
             image,
@@ -462,18 +641,18 @@ function splitPhoto(image) {
 //          4 5 6
 //          7 8 9
 //            0
-function splitOverlayFixed(image) {
+function splitOverlayFixed(image, outputWidth = OUTPUT_WIDTH, outputHeight = OUTPUT_HEIGHT, includeSpecialKeys = false, transform = overlayTransforms.dark) {
     const slices = [];
 
     // Get scale from slider (default 100%)
-    const scale = parseInt(overlayScaleSlider.value) / 100;
+    const scale = transform.scale / 100;
 
     // Get rotation
-    const rotation = parseInt(overlayRotationSlider.value);
+    const rotation = transform.rotation;
 
     // Get X/Y offsets from sliders
-    const posX = parseInt(overlayPosXSlider.value);
-    const posY = parseInt(overlayPosYSlider.value);
+    const posX = transform.posX;
+    const posY = transform.posY;
 
     // Scale the image first
     const scaledWidth = Math.round(image.width * scale);
@@ -500,8 +679,8 @@ function splitOverlayFixed(image) {
     // Grid layout: 3 columns, 4 rows (last row has only center cell for 0)
     const gridCols = 3;
     const gridRows = 4;
-    const totalWidth = OUTPUT_WIDTH * gridCols;   // 900px
-    const totalHeight = OUTPUT_HEIGHT * gridRows; // 1148px
+    const totalWidth = outputWidth * gridCols;
+    const totalHeight = outputHeight * gridRows;
 
     // Calculate offset to center the grid on the rotated image
     // Subtract user offsets to move the crop region
@@ -511,7 +690,11 @@ function splitOverlayFixed(image) {
     // Define grid positions for each key (0-9)
     // Key index -> [column, row]
     // Middle column (col 1) keys need 305px width
-    const keyPositions = {
+    const keyPositions = includeSpecialKeys
+        ? Object.fromEntries(V10_KEY_DEFINITIONS.map(({ key, position }) => [key, position]))
+        : {
+        '*': [0, 3],
+        '#': [2, 3],
         0: [1, 3],  // Center of row 4 (middle column)
         1: [0, 0],  // Row 1
         2: [1, 0],  // Middle column
@@ -522,26 +705,28 @@ function splitOverlayFixed(image) {
         7: [0, 2],  // Row 3
         8: [1, 2],  // Middle column
         9: [2, 2]
-    };
+        };
 
-    // Generate slices for keys 0-9
-    for (let key = 0; key <= 9; key++) {
+    const keys = includeSpecialKeys ? ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '#'] : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+    // Generate slices in the same order as the output definitions.
+    for (const key of keys) {
         const [col, row] = keyPositions[key];
 
         const canvas = document.createElement('canvas');
-        canvas.width = OUTPUT_WIDTH;
-        canvas.height = OUTPUT_HEIGHT;
+        canvas.width = outputWidth;
+        canvas.height = outputHeight;
         const ctx = canvas.getContext('2d');
 
         // Calculate source position on scaled image
-        const sx = Math.round(offsetX + (col * OUTPUT_WIDTH));
-        const sy = Math.round(offsetY + (row * OUTPUT_HEIGHT));
+        const sx = Math.round(offsetX + (col * outputWidth));
+        const sy = Math.round(offsetY + (row * outputHeight));
 
         // Draw the section from the scaled image
         ctx.drawImage(
             scaledCanvas,
-            sx, sy, OUTPUT_WIDTH, OUTPUT_HEIGHT,
-            0, 0, OUTPUT_WIDTH, OUTPUT_HEIGHT
+            sx, sy, outputWidth, outputHeight,
+            0, 0, outputWidth, outputHeight
         );
 
         slices.push(canvas);
@@ -600,10 +785,6 @@ function getExportFilename(extension) {
     return `${baseName}.${extension}`;
 }
 
-function getActiveFilenames() {
-    return exportVersion === '10' ? OVERLAY_FILENAMES_V10 : null;
-}
-
 function setupVersionToggle() {
     const versionButtons = [versionBtn8, versionBtn10];
     versionButtons.forEach(btn => {
@@ -612,20 +793,44 @@ function setupVersionToggle() {
             btn.classList.add('active');
             exportVersion = btn.dataset.version;
             exportFilenameInput.value = `TelephonyUI-${exportVersion}`;
+            appearanceToggle.classList.toggle('hidden', exportVersion !== '10');
+            v10ExportNote.classList.toggle('hidden', exportVersion !== '10');
+            clearGeneratedTheme();
             generateTheme();
         });
     });
 }
 
+function setupAppearanceToggle() {
+    appearanceButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            appearanceButtons.forEach(button => button.classList.remove('active'));
+            btn.classList.add('active');
+            previewAppearance = btn.dataset.appearance;
+            syncPositionControls();
+            if (generatedVersion === '10') renderPreview();
+        });
+    });
+}
+
+function updateAppearanceControls() {
+    const v10PreviewReady = exportVersion === '10' && generatedVersion === '10';
+    appearanceToggle.classList.toggle('hidden', !v10PreviewReady);
+    v10ExportNote.classList.toggle('hidden', exportVersion !== '10');
+    appearanceButtons.forEach(button => {
+        button.disabled = !v10PreviewReady;
+    });
+}
+
 function setupDownloadButton() {
-    downloadBtn.addEventListener('click', () => downloadAll(getExportFilename('zip'), getActiveFilenames()));
+    downloadBtn.addEventListener('click', () => downloadAll(getExportFilename('zip')));
 }
 
 function setupDownloadPassthmButton() {
-    downloadPassthmBtn.addEventListener('click', () => downloadAll(getExportFilename('passthm'), getActiveFilenames()));
+    downloadPassthmBtn.addEventListener('click', () => downloadAll(getExportFilename('passthm')));
 }
 
-async function downloadAll(filename, customFilenames = null) {
+async function downloadAll(filename) {
     if (generatedImages.length === 0) return;
 
     const zip = new JSZip();
@@ -633,8 +838,7 @@ async function downloadAll(filename, customFilenames = null) {
     // Add each image to the zip
     for (const img of generatedImages) {
         const base64Data = img.dataUrl.split(',')[1];
-        const nameToUse = customFilenames ? customFilenames[img.key] : img.filename;
-        zip.file(nameToUse, base64Data, { base64: true });
+        zip.file(img.filename, base64Data, { base64: true });
     }
 
     // Add credit file
