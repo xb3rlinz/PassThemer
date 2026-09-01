@@ -625,7 +625,7 @@ body {
     background: var(--bg-secondary);
     border-radius: var(--radius-md);
     overflow: hidden;
-    aspect-ratio: 300 / 287;
+    aspect-ratio: 305 / 287;
     border: 1px solid var(--border-color);
 }
 

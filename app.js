@@ -30,8 +30,8 @@ const V10_APPEARANCES = {
     dark: 'white',
     light: 'mask'
 };
-const V10_OUTPUT_WIDTH = 225;
-const V10_OUTPUT_HEIGHT = 225;
+const V10_OUTPUT_WIDTH = 305;
+const V10_OUTPUT_HEIGHT = 287;
 const OUTPUT_WIDTH = 305;
 const OUTPUT_HEIGHT = 287;
 
@@ -187,7 +187,7 @@ function setupTransparentBgButton() {
 
 function useTransparentBackground() {
     // Create a transparent canvas as the background
-    // Size it to match 10 keys at 300x287 each (3000x287 for horizontal)
+    // Size it to match 10 keys at 305x287 each (3050x287 for horizontal)
     const canvas = document.createElement('canvas');
     canvas.width = OUTPUT_WIDTH * 10;
     canvas.height = OUTPUT_HEIGHT;
