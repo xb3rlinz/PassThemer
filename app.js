@@ -295,8 +295,12 @@ function handleOverlaysUpload(files, appearance) {
 }
 
 function resolveV10OverlayKey(filename) {
-    if (filename.includes('#')) return '#';
-    if (filename.includes('*')) return '*';
+    const lower = filename.toLowerCase();
+
+    // '*' is an illegal filename character on Windows, so nobody on Windows
+    // can ever name a file to literally contain it. Accept text fallbacks too.
+    if (lower.includes('#') || lower.includes('pound') || lower.includes('hash')) return '#';
+    if (lower.includes('*') || lower.includes('star') || lower.includes('asterisk')) return '*';
 
     const digitMatch = filename.match(/(\d+)/);
     if (!digitMatch) return null;
